@@ -2,20 +2,18 @@ import nmap
 import datetime
 import os
 
-class NetGuardianScanner:
+class scaNmapScanner:
     def __init__(self, target):
         self.target = target
         # Initialize the Nmap PortScanner
         self.nm = nmap.PortScanner()
-        # Module 2: Target specific common ports defined in the requirements
+        # Target specific common ports defined in the requirements (Module 2)
         self.target_ports = '21,22,23,25,53,80,110,143,443,3306,3389'
         self.results = []
 
     def assess_risk(self, port, service_name):
-        """
-        Module 5: Risk Assessment with simple recommendations.
-        Analyzes the port and assigns a risk level and mitigation strategy.
-        """
+        # Risk Assessment with simple recommendations.
+        # Analyzes the port and assigns a risk level and mitigation strategy.
         port = int(port)
         if port in [21, 23]: # FTP and Telnet
             return "High", "Cleartext protocol detected. Highly vulnerable to sniffing. Disable and use secure alternatives like SFTP or SSH."
@@ -29,10 +27,8 @@ class NetGuardianScanner:
             return "Low", "Standard secure or essential service. Ensure the software version is up-to-date to prevent zero-day exploits."
 
     def run_scan(self):
-        """
-        Modules 3 & 4: Service Detection and Enumeration.
-        Uses the -sV flag in Nmap to probe open ports to determine service/version info.
-        """
+        # Service Detection and Enumeration.
+        # Uses the -sV flag in Nmap to probe open ports to determine service/version info.
         try:
             # -sV: Probe open ports to determine service/version info
             self.nm.scan(self.target, self.target_ports, arguments='-sV')
@@ -68,16 +64,14 @@ class NetGuardianScanner:
             return False
 
     def generate_txt_report(self):
-        """
-        Module 6: Report Generation in TXT format.
-        Creates a time-stamped text file detailing the vulnerabilities found.
-        """
+        # Report Generation in TXT format.
+        # Creates a time-stamped text file detailing the vulnerabilities found.
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"NetGuardian_Report_{self.target}_{timestamp}.txt"
+        filename = f"scaNMAP_Report_{self.target}_{timestamp}.txt"
         
         with open(filename, 'w') as file:
             file.write("="*50 + "\n")
-            file.write(f"NETGUARDIAN VULNERABILITY REPORT\n")
+            file.write(f"scaNMAP VULNERABILITY REPORT\n")
             file.write(f"Target: {self.target}\n")
             file.write(f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             file.write("="*50 + "\n\n")

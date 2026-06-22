@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>scaNMAP Scanner</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; }
+        input[type="text"] { width: 70%; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; font-size: 16px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #2980b9; }
+        .error { color: red; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #34495e; color: white; }
+        .High { color: #c0392b; font-weight: bold; }
+        .Medium { color: #f39c12; font-weight: bold; }
+        .Low { color: #27ae60; font-weight: bold; }
+        .success-msg { background-color: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin-top: 20px;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ scaNMAP Vulnerability Scanner</h1>
+        <p>Enter an IP address or hostname to initiate a basic Vulnerability Assessment.</p>
+        
+        <form method="POST">
+            <input type="text" name="target" placeholder="e.g., scanme.nmap.org or 192.168.1.1" required>
+            <button type="submit">Scan Target</button>
+        </form>
+
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+
+        {% if results %}
+            <div class="success-msg">
+                Scan complete! Report generated locally: <strong>{{ report_file }}</strong>.
+            </div>
+            <h2>Scan Results for {{ target }}</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Port</th>
+                        <th>State</th>
+                        <th>Service & Version</th>
+                        <th>Risk Level</th>
+                        <th>Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in results %}
+                    <tr>
+                        <td>{{ item.port }}</td>
+                        <td>{{ item.state }}</td>
+                        <td>{{ item.service }} ({{ item.version }})</td>
+                        <td class="{{ item.risk }}">{{ item.risk }}</td>
+                        <td>{{ item.recommendation }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5">No open ports identified on the target.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</body>
+</html>
