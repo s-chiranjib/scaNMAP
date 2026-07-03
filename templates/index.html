@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>scaNMAP</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 20px; background-color: #f5f5f7; color: #333; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .control-group { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        input, select, button { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        input { flex: 1; min-width: 200px; }
+        button { background-color: #d93025; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #b3261e; }
+        button:disabled { background-color: #a2a2a2; cursor: not-allowed; }
+        .status { font-weight: bold; color: #666; margin-bottom: 20px; }
+        .host-card { border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px; margin-bottom: 15px; background: #fafafa; }
+        .host-header { display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 10px; }
+        .host-meta { font-size: 14px; color: #555; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; }
+        th { background-color: #f0f0f0; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge-up { background-color: #d4edda; color: #155724; }
+        .badge-open { background-color: #cce5ff; color: #004085; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🎯 scaNMAP</h2>
+    
+    <div class="control-group">
+        <input type="text" id="target" placeholder="Target (e.g., 192.168.1.1/24 or localhost)" value="127.0.0.1">
+        <select id="scanType">
+            <option value="stealth">SYN Stealth + OS (-sS -sV -O)</option>
+            <option value="intense">Intense Scan (-T4 -A -v)</option>
+            <option value="ping_sweep">Local Ping Sweep (-sn)</option>
+            <option value="vuln">Vulnerability Scripts (-sV --script vuln)</option>
+        </select>
+        <button id="scanBtn" onclick="startScan()">Start Scan</button>
+    </div>
+
+    <div id="statusMessage" class="status">Ready</div>
+    <div id="results"></div>
+</div>
+
+<script>
+    let pollInterval;
+
+    async function startScan() {
+        const target = document.getElementById('target').value;
+        const type = document.getElementById('scanType').value;
+        const btn = document.getElementById('scanBtn');
+        const statusDiv = document.getElementById('statusMessage');
+        const resultsDiv = document.getElementById('results');
+
+        if(!target) return alert("Please enter a valid target.");
+
+        btn.disabled = true;
+        statusDiv.innerText = "Initializing scan job...";
+        resultsDiv.innerHTML = "";
+
+        try {
+            const response = await fetch('/api/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target, type })
+            });
+            const data = await response.json();
+            
+            if(data.scan_id) {
+                statusDiv.innerText = "Scan is running in background (this may take a few minutes for OS/Vuln scans)...";
+                pollInterval = setInterval(() => checkStatus(data.scan_id), 3000);
+            }
+        } catch (error) {
+            statusDiv.innerText = "Error starting scan. Is the Flask server running?";
+            btn.disabled = false;
+        }
+    }
+
+    async function checkStatus(scanId) {
+        const statusDiv = document.getElementById('statusMessage');
+        const btn = document.getElementById('scanBtn');
+
+        try {
+            const response = await fetch(`/api/scan/${scanId}`);
+            const data = await response.json();
+
+            if (data.status === 'completed') {
+                clearInterval(pollInterval);
+                statusDiv.innerText = "Scan completed successfully! Results saved locally.";
+                btn.disabled = false;
+                renderResults(data.results);
+            } else if (data.status === 'failed') {
+                clearInterval(pollInterval);
+                statusDiv.innerText = `Scan failed: ${data.error}. Did you run Flask with sudo/admin?`;
+                btn.disabled = false;
+            }
+        } catch (error) {
+            clearInterval(pollInterval);
+            statusDiv.innerText = "Error tracking status.";
+            btn.disabled = false;
+        }
+    }
+
+    function renderResults(hosts) {
+        const resultsDiv = document.getElementById('results');
+        if(hosts.length === 0) {
+            resultsDiv.innerHTML = "<p>No active hosts found.</p>";
+            return;
+        }
+
+        let html = '';
+        hosts.forEach(host => {
+            html += `
+                <div class="host-card">
+                    <div class="host-header">
+                        <span>🖥️ ${host.ip} (${host.hostname || 'Unknown Hostname'})</span>
+                        <span class="badge badge-up">${host.state.toUpperCase()}</span>
+                    </div>
+                    <div class="host-meta">
+                        <strong>MAC:</strong> ${host.mac} &nbsp;|&nbsp; 
+                        <strong>OS Match:</strong> ${host.os}
+                    </div>
+            `;
+
+            if(Object.keys(host.protocols).length > 0) {
+                for (const proto in host.protocols) {
+                    html += `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Port (${proto.toUpperCase()})</th>
+                                    <th>State</th>
+                                    <th>Service</th>
+                                    <th>Version</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    host.protocols[proto].forEach(p => {
+                        html += `
+                            <tr>
+                                <td><strong>${p.port}</strong></td>
+                                <td><span class="badge badge-open">${p.state}</span></td>
+                                <td>${p.name}</td>
+                                <td>${p.product} ${p.version}</td>
+                            </tr>
+                        `;
+                    });
+                    html += `</tbody></table>`;
+                }
+            } else {
+                html += `<p style="color:#777; font-size:14px;">No open ports identified.</p>`;
+            }
+
+            html += `</div>`;
+        });
+
+        resultsDiv.innerHTML = html;
+    }
+</script>
+</body>
+</html>
