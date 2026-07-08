@@ -88,6 +88,13 @@
             });
             const data = await response.json();
             
+            // Check if the backend returned an error (like not being logged in)
+            if (data.error) {
+                statusDiv.innerText = `Error: ${data.error}`;
+                btn.disabled = false;
+                return;
+            }
+            
             if(data.scan_id) {
                 statusDiv.innerText = "Scan is running in background (this may take a few minutes for OS/Vuln scans)...";
                 pollInterval = setInterval(() => checkStatus(data.scan_id), 3000);
