@@ -9,11 +9,11 @@ from flask import session
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = "local_only_secret_key_change_me" # Enables cookies/sessions
+app.secret_key = "oaoA8zFcd9CgsKZURfbQ/A6ciw7PICLAObs5kjVjWUo="
 DB_FILE = "zenmap_local.db"
 
 def init_db():
-    """Creates tables if they don't exist yet."""
+    # Creates tables if they don't exist yet.
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
         cursor.execute('''
@@ -39,11 +39,11 @@ def init_db():
 init_db()
 
 HISTORY_FILE = "scan_history.json"
-# In-memory dictionary for active scans
+# In-memory dictionary for active scans.
 scans = {}
 
 def save_to_history(scan_data):
-    """Appends completed scan data to a local JSON file."""
+    # Appends completed scan data to a local JSON file.
     history = []
     if os.path.exists(HISTORY_FILE):
         try:
@@ -58,7 +58,7 @@ def save_to_history(scan_data):
         json.dump(history, f, indent=4)
 
 def execute_nmap_scan(scan_id, username, target, arguments):
-    """Background worker that runs Nmap and parses results into SQLite."""
+    # Background worker that runs Nmap and parses results into SQLite.
     try:
         nm = nmap.PortScanner()
         nm.scan(hosts=target, arguments=arguments)
